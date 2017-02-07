@@ -65,14 +65,101 @@ function apiSearchSong(userID,song,increment){
       //     console.log(json.data[i].name + "\n");
       //   }
       // }else{
+      //}
         userHash.search(userID).addSong(json.data[0].id);
         console.log("Added "+json.data[0].id+" to "+userID);
         doneWithAJAX(userID,song,increment,"song");
-      //}
     }
   });
 }
 
+function apiMakeGenreCall(userID){
+  var url = baseURL + "playlist?api_key=ac72a0fa210fdd16b336abb22a2daf49&genres="+userHash.search(userID).genre;
+  console.log("Pulling data from: "+url);
+    request(url,function(err,res,body){
+    var json = JSON.parse(body);
+    userHash.search(userID).doneWithGenreCalls = true;
+    if(json.status.code != "0"){
+      if(json.status.code == "-1"){
+        var from = twitterHash.search(userID);
+        var newTweet = "@"+from+" Genere Was Not Found! Please use this list & try again!";
+        TinyURL.shorten("https://developer.musicgraph.com/api-docs/v2/dictionary", function(res) {
+          newTweet = newTweet + res;
+          tweetIt(newTweet, userID);
+        });
+      }
+      console.log("We have an error!");
+      console.log("The error is "+json.status.message);
+    }else{
+      for(var i =0;i<json.data.length;i++){
+        if(json.data[i].track_youtube_id != undefined){
+          console.log("Youtube link found, "+json.data[i].track_youtube_id);
+          userHash.search(userID).addLink(json.data[i].track_youtube_id);
+        }
+      }
+      tweetUser(userID);
+    }
+  });
+}
+
+function apiMakeDecadeCall(userID){
+  var url = baseURL + "playlist?api_key=ac72a0fa210fdd16b336abb22a2daf49&decades="+userHash.search(userID).decade;
+  console.log("Pulling data from: "+url);
+    request(url,function(err,res,body){
+      userHash.search(userID).doneWithDecadeCalls = true;
+    var json = JSON.parse(body);
+    if(json.status.code != "0"){
+      if(json.status.code == "-1"){
+        var from = twitterHash.search(userID);
+        var newTweet = "@"+from+" Decade Was Not Found! Please use this list & try again!";
+        TinyURL.shorten("https://developer.musicgraph.com/api-docs/v2/dictionary", function(res) {
+          newTweet = newTweet + res;
+          tweetIt(newTweet, userID);
+        });
+      }
+      console.log("We have an error!");
+      console.log("The error is "+json.status.message);
+    }else{
+      for(var i =0;i<json.data.length;i++){
+        if(json.data[i].track_youtube_id != undefined){
+          console.log("Youtube link found, "+json.data[i].track_youtube_id);
+          userHash.search(userID).addLink(json.data[i].track_youtube_id);
+        }
+      }
+      tweetUser(userID);
+    }
+  });
+}
+
+function apiMakeGenreAndDecadeCall(userID){
+  var url = baseURL + "playlist?api_key=ac72a0fa210fdd16b336abb22a2daf49&genres="+userHash.search(userID).genre+"&decades="+userHash.search(userID).decade;
+  console.log("Pulling data from: "+url);
+    request(url,function(err,res,body){
+    var json = JSON.parse(body);
+    userHash.search(userID).doneWithGenreCalls = true;
+    userHash.search(userID).doneWithDecadeCalls = true;
+    if(json.status.code != "0"){
+      if(json.status.code == "-1"){
+        var from = twitterHash.search(userID);
+        var newTweet = "@"+from+" Genere or Decade Was Not Found! Please use this list & try again!";
+        TinyURL.shorten("https://developer.musicgraph.com/api-docs/v2/dictionary", function(res) {
+          newTweet = newTweet + res;
+          tweetIt(newTweet, userID);
+        });
+      }
+      console.log("We have an error!");
+      console.log("The error is "+json.status.message);
+    }else{
+      for(var i =0;i<json.data.length;i++){
+        if(json.data[i].track_youtube_id != undefined){
+          console.log("Youtube link found, "+json.data[i].track_youtube_id);
+          userHash.search(userID).addLink(json.data[i].track_youtube_id);
+        }
+      }
+      tweetUser(userID);
+    }
+  });
+}
 
 function apiMakePlaylist(url,userID){
     console.log("Pulling Data from : "+url);
@@ -156,19 +243,24 @@ function tweetEvent(eventMsg){
 }
 
 function tweetUser(userID){
-  var basePlaylistURL = "http://www.youtube.com/watch_videos?video_ids=";
-  var videoIDs = "";
-  while(userHash.search(userID).peekLink()){
-    videoIDs = videoIDs + userHash.search(userID).popLink();
-    if(userHash.search(userID).peekLink()){
-      videoIDs = videoIDs +",";
+  if(userHash.search(userID).doneWithArtistCalls &&
+    userHash.search(userID).doneWithSongCalls &&
+    userHash.search(userID).doneWithGenreCalls &&
+    userHash.search(userID).doneWithDecadeCalls){
+      var basePlaylistURL = "http://www.youtube.com/watch_videos?video_ids=";
+      var videoIDs = "";
+      while(userHash.search(userID).peekLink()){
+        videoIDs = videoIDs + userHash.search(userID).popLink();
+        if(userHash.search(userID).peekLink()){
+          videoIDs = videoIDs +",";
+        }
+      }
+      console.log("Youtube URLS are "+videoIDs);
+      TinyURL.shorten(basePlaylistURL+videoIDs, function(res) {
+        var newTweet = '@' + twitterHash.search(userID) + " Your Playist is: "+res;
+        tweetIt(newTweet, userID);
+      });
     }
-  }
-  console.log("Youtube URLS are "+videoIDs);
-  TinyURL.shorten(basePlaylistURL+videoIDs, function(res) {
-    var newTweet = '@' + twitterHash.search(userID) + " Your Playist is: "+res;
-    tweetIt(newTweet, userID);
-  });
 }
 
 function parseText(userID,text){
@@ -184,7 +276,7 @@ function parseText(userID,text){
       switch (array[i]) {
         case "-a":
         if(previousCase != "a" && i !=1){
-          searchTerms = searchTerms + '"], artist": [';
+          searchTerms = searchTerms + '"artist": [';
         }else if(previousCase != "a"){
           searchTerms = searchTerms + '"artist":['
         }
@@ -213,11 +305,17 @@ function parseText(userID,text){
             searchTerms = searchTerms + '"';
           }
           if(haveMoreTerms == 1){
-            searchTerms = searchTerms + ",";
+            searchTerms = searchTerms + "],";
           }
           break;
         case "-t":
-          searchTerms = searchTerms + '"track": "';
+        if(previousCase != "t" && i !=1){
+          searchTerms = searchTerms + '"track": [';
+        }else if(previousCase != "t"){
+          searchTerms = searchTerms + '"track":['
+        }
+        searchTerms = searchTerms + '"';
+        previousCase = "a";
           closedTags = 0;
           haveMoreTerms = 0;
           var multipleWords = 0;
@@ -241,11 +339,16 @@ function parseText(userID,text){
             searchTerms = searchTerms + '"';
           }
           if(haveMoreTerms == 1){
-            searchTerms = searchTerms + ",";
+            searchTerms = searchTerms + "],";
           }
-          break;
         case "-g":
-          searchTerms = searchTerms + '"genre": "';
+        if(previousCase != "g" && i !=1){
+          searchTerms = searchTerms + '"genre": [';
+        }else if(previousCase != "g"){
+          searchTerms = searchTerms + '"genre":['
+        }
+        searchTerms = searchTerms + '"';
+        previousCase = "g";
           closedTags = 0;
           haveMoreTerms = 0;
           var multipleWords = 0;
@@ -269,11 +372,16 @@ function parseText(userID,text){
             searchTerms = searchTerms + '"';
           }
           if(haveMoreTerms == 1){
-            searchTerms = searchTerms + ",";
+            searchTerms = searchTerms + "],";
           }
-          break;
         case "-d":
-          searchTerms = searchTerms + '"decade": "';
+        if(previousCase != "d" && i !=1){
+          searchTerms = searchTerms + '"decade": [';
+        }else if(previousCase != "t"){
+          searchTerms = searchTerms + '"decade":['
+        }
+        searchTerms = searchTerms + '"';
+        previousCase = "d";
           closedTags = 0;
           haveMoreTerms = 0;
           var multipleWords = 0;
@@ -297,13 +405,15 @@ function parseText(userID,text){
             searchTerms = searchTerms + '"';
           }
           if(haveMoreTerms == 1){
-            searchTerms = searchTerms + ",";
+            searchTerms = searchTerms + "],";
           }
-          break;
         default:
 
       }
     }
+  }
+  if(closedTags == 0){
+    searchTerms = searchTerms + '"';
   }
   searchTerms = searchTerms + "]}";
   console.log("The final search terms are: "+searchTerms);
@@ -315,7 +425,7 @@ function checkSearchTerms(userID,searchTerms){
   if(searchTerms[1] !="]"){
     var json = JSON.parse(searchTerms);
     if(json.artist){
-      if(json.artist.length !=0){
+      if(json.artist.length != 0){
         console.log("We have "+json.artist.length+ " artists!");
         userHash.search(userID).doneWithArtistCalls = false;
         apiSearchArtist(userID,json.artist,0);
@@ -331,13 +441,26 @@ function checkSearchTerms(userID,searchTerms){
     if(json.genre){
       if(json.genre.length != 0){
         console.log("We have genere!");
+        userHash.search(userID).genre = json.genre[0];
+        userHash.search(userID).doneWithGenreCalls = false;
       }
     }
     if(json.decade){
       if(json.decade.length != 0){
         console.log("We have decade!");
+        userHash.search(userID).decade = json.decade[0];
+        userHash.search(userID).doneWithDecadeCalls = false;
       }
     }
+  }
+  if(!userHash.search(userID).doneWithGenreCalls && !userHash.search(userID).doneWithDecadeCalls){
+    apiMakeGenreAndDecadeCall(userID);
+  }
+  if(!userHash.search(userID).doneWithDecadeCalls){
+    apiMakeDecadeCall(userID);
+  }
+  if(!userHash.search(userID).doneWithGenreCalls){
+    apiMakeGenreCall(userID);
   }
 }
 
@@ -386,8 +509,12 @@ function Person(){
   this.artist = new Stack();
   this.song = new Stack();
   this.youtube = new Stack();
+  this.genre = "";
+  this.decade = "";
   this.doneWithArtistCalls = true;
   this.doneWithSongCalls = true;
+  this.doneWithGenreCalls = true;
+  this.doneWithDecadeCalls = true;
 };
 
 Person.prototype.addArtist = function (artist) {
