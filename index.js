@@ -3,7 +3,7 @@ console.log('Its alive aayyy');
 //Holds artist arrays at the key of the user who tweeted the bot.
 var userHash = new HashTable(3);
 
-var numberOfTweets = 0;
+var twitterHash = new HashTable(3);
 
 var twit = require('twit');
 
@@ -42,21 +42,90 @@ function apiSearchArtist(userID,artist,increment){
       // }else{
         userHash.search(userID).addArtist(json.data[0].id);
         console.log("Added "+json.data[0].id+" to "+userID);
-        doneWithAJAX(userID,artist,increment);
+        doneWithAJAX(userID,artist,increment,"artist");
       //}
     }
   });
 }
 
-function doneWithAJAX(userID,artist,increment){
-  if (userHash.search(userID).artistLength() != artist.length) {
-    increment++;
-    apiSearchArtist(userID,artist,increment);
-  }else{
-    createPlaylist(userID);
+function apiSearchSong(userID,song,increment){
+  var url = baseURL + "track/search?api_key=ac72a0fa210fdd16b336abb22a2daf49&title="+song[increment].split(' ').join('+')+"&limit=3";
+  console.log("Pulling data from: "+url);
+    request(url,function(err,res,body){
+    var json = JSON.parse(body);
+    if(json.status.code != "0"){
+      console.log("We have an error!");
+      console.log("The error is "+json.status.message);
+    }else{
+      //Lets ignore multiple results for now, thats too complicated
+      // if(json.pagination.total != "1"){
+      //   console.log("We have multiple results.");
+      //   console.log("The results are: ");
+      //   for(var i=0;i<json.data.length;i++){
+      //     console.log(json.data[i].name + "\n");
+      //   }
+      // }else{
+        userHash.search(userID).addSong(json.data[0].id);
+        console.log("Added "+json.data[0].id+" to "+userID);
+        doneWithAJAX(userID,song,increment,"song");
+      //}
+    }
+  });
+}
+
+
+function apiMakePlaylist(url,userID){
+    console.log("Pulling Data from : "+url);
+    request(url,function(err,res,body){
+    var json = JSON.parse(body);
+    if(json.status.code != "0"){
+      console.log("We have an error!");
+      console.log("The error is "+json.status.message);
+    }else{
+      for(var i =0;i<json.data.length;i++){
+        if(json.data[i].track_youtube_id != undefined){
+          console.log("Youtube link found, "+json.data[i].track_youtube_id);
+          userHash.search(userID).addLink(json.data[i].track_youtube_id);
+        }
+      }
+      tweetUser(userID);
+    }
+  });
+}
+
+function doneWithAJAX(userID,resourceArray,increment,resource){
+  switch (resource) {
+    case "artist":
+    if (userHash.search(userID).artistLength() != resourceArray.length) {
+      increment++;
+      apiSearchArtist(userID,resourceArray,increment);
+    }else{
+      userHash.search(userID).doneWithArtistCalls = true;
+      checkIfDoneWithCalls(userID);
+    }
+      break;
+    case "song":
+    if (userHash.search(userID).songLength() != resourceArray.length) {
+      increment++;
+      apiSearchSong(userID,resourceArray,increment);
+    }else{
+      userHash.search(userID).doneWithSongCalls = true;
+      checkIfDoneWithCalls(userID);
+    }
+      break;
+    default:
+
   }
 }
 //getArtistInfo();
+
+function checkIfDoneWithCalls(userID){
+  //If We are done with the calls, then make the playlist, otherwise we still need to call things.
+  var person = userHash.search(userID);
+  if(person.doneWithSongCalls && person.doneWithArtistCalls){
+    createPlaylistURL(userID);
+  }
+}
 
 var stream = T.stream('user');
 
@@ -69,16 +138,37 @@ stream.on('tweet', function (tweet) {
 
 function tweetEvent(eventMsg){
 	var from = eventMsg.user.screen_name;
+  console.log("The tweet was from: "+from);
   var text = eventMsg.text+"";
 
-  userHash.add(eventMsg.id_str, new Person());
+  if(from !== "MusicSuggestIO"){
+    userHash.add(eventMsg.id_str, new Person());
 
-  parseText(eventMsg.id_str,text);
+    twitterHash.add(eventMsg.id_str, eventMsg.user.screen_name);
+
+    parseText(eventMsg.id_str,text);
+  }
 
 	// if(from !== 'MusicSuggestIO'){
   //   var newTweet = '@' + from+ ' '+knockknock();
   //   tweetIt(newTweet, eventMsg.id_str);
   // }
+}
+
+function tweetUser(userID){
+  var basePlaylistURL = "http://www.youtube.com/watch_videos?video_ids=";
+  var videoIDs = "";
+  while(userHash.search(userID).peekLink()){
+    videoIDs = videoIDs + userHash.search(userID).popLink();
+    if(userHash.search(userID).peekLink()){
+      videoIDs = videoIDs +",";
+    }
+  }
+  console.log("Youtube URLS are "+videoIDs);
+  TinyURL.shorten(basePlaylistURL+videoIDs, function(res) {
+    var newTweet = '@' + twitterHash.search(userID) + " Your Playist is: "+res;
+    tweetIt(newTweet, userID);
+  });
 }
 
 function parseText(userID,text){
@@ -250,45 +340,62 @@ function parseText(userID,text){
 //This function calls the api and checks to make sure if they are correct.
 //If they are incorrect, the bot will tweet at the user and tell them their request was not found.
 function checkSearchTerms(userID,searchTerms){
-  var json = JSON.parse(searchTerms);
-  if(json.artist){
-    if(json.artist.length !=0){
-      console.log("We have "+json.artist.length+ " artists!");
-      apiSearchArtist(userID,json.artist,0);
+  if(searchTerms[1] !="]"){
+    var json = JSON.parse(searchTerms);
+    if(json.artist){
+      if(json.artist.length !=0){
+        console.log("We have "+json.artist.length+ " artists!");
+        userHash.search(userID).doneWithArtistCalls = false;
+        apiSearchArtist(userID,json.artist,0);
+      }
     }
-  }
-  if(json.track){
-    if(json.track.length != 0){
-      console.log("We have artists!");
+    if(json.track){
+      if(json.track.length != 0){
+        console.log("We have"+ json.track.length + "tracks!");
+        userHash.search(userID).doneWithSongCalls = false;
+        apiSearchSong(userID,json.track,0);
+      }
     }
-  }
-  if(json.genre){
-    if(json.genre.length != 0){
-      console.log("We have artists!");
+    if(json.genre){
+      if(json.genre.length != 0){
+        console.log("We have genere!");
+      }
     }
-  }
-  if(json.decade){
-    if(json.decade.length != 0){
-      console.log("We have artists!");
+    if(json.decade){
+      if(json.decade.length != 0){
+        console.log("We have decade!");
+      }
     }
-  }
-  if(json.album){
-    if(json.album.length != 0){
-      console.log("We have artists!");
+    if(json.album){
+      if(json.album.length != 0){
+        console.log("We have album!");
+      }
     }
   }
 }
 
-function createPlaylist(userID){
-  var currentPerson = userHash.search(userID);
-  var artistIDs = "";
-  for(var i = 0; i<currentPerson.artistLength()+1;i++){
-    artistIDs = artistIDs + currentPerson.popArtist();
-    if(currentPerson.peekArtist()){
-      artistIDs = artistIDs + ",";
+function createPlaylistURL(userID){
+    var currentPerson = userHash.search(userID);
+    var url = baseURL + "playlist?api_key=ac72a0fa210fdd16b336abb22a2daf49";
+    if(currentPerson.artistLength() != 0){
+      url = url + "&artist_ids=";
+      for(var i = 0; i<currentPerson.artistLength()+1;i++){
+        url = url + currentPerson.popArtist();
+        if(currentPerson.peekArtist()){
+          url = url + ",";
+        }
+      }
     }
-  }
-  console.log("The artist ID's we will search for will be: "+artistIDs);
+    if(currentPerson.songLength() != 0){
+      url = url + "&track_ids="
+      for(var i = 0; i<currentPerson.songLength()+1;i++){
+        url = url + currentPerson.popSong();
+        if(currentPerson.peekSong()){
+          url = url + ",";
+        }
+      }
+    }
+    apiMakePlaylist(url,userID);
 }
 
 function tweetIt(txt, statusID){
@@ -310,6 +417,10 @@ function tweetIt(txt, statusID){
 
 function Person(){
   this.artist = new Stack();
+  this.song = new Stack();
+  this.youtube = new Stack();
+  this.doneWithArtistCalls = true;
+  this.doneWithSongCalls = true;
 };
 
 Person.prototype.addArtist = function (artist) {
@@ -326,6 +437,38 @@ Person.prototype.peekArtist = function () {
 
 Person.prototype.artistLength = function () {
   return this.artist.length();
+};
+
+Person.prototype.addSong = function (song) {
+  this.song.push(artist);
+};
+
+Person.prototype.popSong = function () {
+  return this.song.pop();
+};
+
+Person.prototype.peekSong = function () {
+  return this.song.peek();
+};
+
+Person.prototype.songLength = function () {
+  return this.song.length();
+};
+
+Person.prototype.addLink = function (link) {
+  this.youtube.push(link);
+};
+
+Person.prototype.popLink = function () {
+  return this.youtube.pop();
+};
+
+Person.prototype.peekLink = function () {
+  return this.youtube.peek();
+};
+
+Person.prototype.linkLength = function () {
+  return this.youtube.length();
 };
 
 
