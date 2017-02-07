@@ -300,34 +300,6 @@ function parseText(userID,text){
             searchTerms = searchTerms + ",";
           }
           break;
-        case "-ab":
-          searchTerms = searchTerms + '"album": "';
-          closedTags = 0;
-          haveMoreTerms = 0;
-          var multipleWords = 0;
-          while(array[i+1]){
-            if(!array[i+1].includes("-")){
-              if(multipleWords == 1){
-                searchTerms = searchTerms + " ";
-              }
-              multipleWords = 1;
-              console.log("Aritst is "+ array[i+1]);
-              searchTerms = searchTerms + array[++i];
-            }
-            else{
-              searchTerms = searchTerms + '"';
-              closedTags = 1;
-              haveMoreTerms = 1;
-              break;
-            }
-          }
-          if(closedTags == 0){
-            searchTerms = searchTerms + '"';
-          }
-          if(haveMoreTerms == 1){
-            searchTerms = searchTerms + ",";
-          }
-          break;
         default:
 
       }
@@ -364,11 +336,6 @@ function checkSearchTerms(userID,searchTerms){
     if(json.decade){
       if(json.decade.length != 0){
         console.log("We have decade!");
-      }
-    }
-    if(json.album){
-      if(json.album.length != 0){
-        console.log("We have album!");
       }
     }
   }

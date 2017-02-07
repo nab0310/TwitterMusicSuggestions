@@ -31,5 +31,9 @@ Control Flow of App:
 2) The bot parses the suggestion. (Use switches for easy parsing)
 3) The bot (potentially confirms the suggestion)?? How do we do this? Store in an array?
 4) We use the end points to find things similar to the request (artist, album, or song)
-5) We use either artist/track id's or genre/decade info to make a playlist
-6)
+5) We use either artist/track id's or genre/decade info to make a playlist (Can only do one decade/genre)
+
+Issues:
+
+API only allows for combos of genre/decade not artist/track...
+Sol: Make two seperate playlists and combine them into one?
