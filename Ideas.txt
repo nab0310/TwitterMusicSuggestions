@@ -1,0 +1,35 @@
+Artist End Points:
+/search	Returns results based on search operations; described in more detail below
+/suggest	Returns a list of artists based on a partial name passed, begins with
+/{id}	Return meta about an artist
+/{id}/albums	Returns a list of an artist's albums
+/{id}/tracks	Returns a list of an artist's tracks
+/{id}/similar	Returns a list of similar artists
+
+Album End Points:
+/search	Return results based on search operations; described in more detail below
+/suggest	Return a list of albums based on a partial name passed
+/{id}	Return meta about an album
+/{id}/tracks	Return a list of an album's tracks
+/{id}/artists	Return a list of an album's artists/performers
+
+Track End Points:
+/search	Return results based on search operations; described in more detail below
+/suggest	Return a list of tracks based on a partial name passed
+/{id}	Return meta about a track
+/{id}/edges	Return all edges for a track
+
+Playlists:
+Create playlists based off of artists or songs. Response contains YouTube watch links, spotify id, ect...
+You can do genere and decade searches, filter by popularity and similarity
+To Add all songs into a playlist, use http://www.youtube.com/watch_videos?video_ids=ID1,ID2,ID3,ID4…
+Where ID's are the YT watch link ids.... (URL shortener to fit in a tweet!)
+
+Control Flow of App:
+1) User submits a suggestion, a tweet at the bot.
+    Request things to include: artist, track, genre, decade, album, Number of tracks in playlist
+2) The bot parses the suggestion. (Use switches for easy parsing)
+3) The bot (potentially confirms the suggestion)?? How do we do this? Store in an array?
+4) We use the end points to find things similar to the request (artist, album, or song)
+5) We use either artist/track id's or genre/decade info to make a playlist
+6)
