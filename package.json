@@ -11,6 +11,11 @@
     "type": "git",
     "url": "git+https://github.com/nab0310/TwitterMusicSuggestions.git"
   },
+  "dependencies": {
+    "twit": "2.2.5",
+    "ajax-request": "1.2.1",
+    "tinyurl": "1.1.2"
+  },
   "author": "",
   "license": "ISC",
   "bugs": {
