@@ -19,7 +19,6 @@ var TinyURL = require('tinyurl');
 
 var baseURL = "http://api.musicgraph.com/api/v2/";
 
-
 var stream = T.stream('user');
 
 console.log("Stream is started");
@@ -409,7 +408,7 @@ function checkSearchTerms(userID,searchTerms){
     }
   }else{
     var from = twitterHash.search(userID);
-    var newTweet = "@"+from+"Error"+ Math.floor((Math.random() * 1000000) + 1) + ": Invalid Switch. Valid Switches: -a <Artist> -g <Genre> -d<Decade> -t<Track>";
+    var newTweet = "@"+from+"Error "+ Math.floor((Math.random() * 1000000) + 1) + ": Invalid Switch. Valid Switches: -a <Artist> -g <Genre> -d<Decade> -t<Track>";
       tweetIt(newTweet, userID);
   }
 }
